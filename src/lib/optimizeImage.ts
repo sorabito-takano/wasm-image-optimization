@@ -16,8 +16,7 @@ export const _optimizeImage = async ({
   width = 0,
   height = 0,
   quality = 100,
-  format = "avif",
-  speed = 6,
+  format = "webp",
   libImage,
 }: OptimizeParams & {
   libImage: Promise<ModuleType>;
@@ -28,7 +27,6 @@ export const _optimizeImage = async ({
     height,
     quality,
     format,
-    speed,
     libImage,
   }).then((r) => r?.data);
 
@@ -37,15 +35,14 @@ export const _optimizeImageExt = async ({
   width = 0,
   height = 0,
   quality = 100,
-  format = "avif",
-  speed = 6,
+  format = "webp",
   libImage,
 }: OptimizeParams & {
   libImage: Promise<ModuleType>;
 }) =>
   libImage.then(({ optimize, releaseResult }) =>
     result(
-      optimize(image, width, height, quality, format, speed),
+      optimize(image, width, height, quality, format),
       releaseResult,
     ),
   );

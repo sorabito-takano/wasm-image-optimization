@@ -1,6 +1,6 @@
 # wasm-image-optimization
 
-WebAssembly is used to provide image transformation functionality.
+WebAssembly-based image optimization library powered by OpenCV, specialized for WebP output format.
 
 - Frontend
 
@@ -15,16 +15,11 @@ WebAssembly is used to provide image transformation functionality.
 
 - Convert
   - source format
-    - svg
-    - jpeg (EXIF orientation is supported)
-    - png
-    - webp
-    - avif
-  - output format
     - jpeg
     - png
     - webp
-    - avif (default)
+  - output format
+    - webp (high-quality Lanczos resampling)
 
 ## Example
 

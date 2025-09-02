@@ -4,8 +4,7 @@ export declare type ModuleType = {
     width: number,
     height: number,
     quality: number,
-    format: "jpeg" | "png" | "webp" | "avif" | "none",
-    speed: number,
+    format: "webp" | "none",
   ) => OptimizeResult | undefined;
   releaseResult: () => void;
 };
