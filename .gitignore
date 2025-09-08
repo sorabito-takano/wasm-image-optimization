@@ -1,0 +1,10 @@
+node_modules
+/dist
+/opencv*
+/libwebp
+/libavif
+/libexif
+/devel
+/image_output
+.vscode
+/work

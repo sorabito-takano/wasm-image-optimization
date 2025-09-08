@@ -1,0 +1,55 @@
+# Build environment stage
+FROM emscripten/emsdk:4.0.14 AS build-env
+WORKDIR /app
+
+# Install required packages and build dependencies
+RUN apt-get update && apt-get install -y dh-autoreconf ninja-build yasm python3-numpy cmake python3 &&\
+    git clone https://github.com/webmproject/libwebp &&\
+    git clone https://github.com/libexif/libexif &&\
+    git clone https://github.com/opencv/opencv &&\
+    cd opencv && git checkout 4.12.0 &&\
+    find . -name "*.txt" -exec sed -i 's/-sDEMANGLE_SUPPORT=1//g' {} \; &&\
+    find . -name "*.txt" -exec sed -i 's/DEMANGLE_SUPPORT=1//g' {} \; &&\
+    find . -name "*.py" -exec sed -i 's/-sDEMANGLE_SUPPORT=1//g' {} \; &&\
+    find . -name "*.py" -exec sed -i 's/DEMANGLE_SUPPORT=1//g' {} \; &&\
+    emcmake python3 ./platforms/js/build_js.py build_js \
+        --cmake_option="-DBUILD_opencv_calib3d=OFF" \
+        --cmake_option="-DBUILD_opencv_dnn=OFF" \
+        --cmake_option="-DBUILD_opencv_features2d=OFF" \
+        --cmake_option="-DBUILD_opencv_flann=OFF" \
+        --cmake_option="-DBUILD_opencv_gapi=OFF" \
+        --cmake_option="-DBUILD_opencv_highgui=OFF" \
+        --cmake_option="-DBUILD_opencv_imgcodecs=OFF" \
+        --cmake_option="-DBUILD_opencv_ml=OFF" \
+        --cmake_option="-DBUILD_opencv_objdetect=OFF" \
+        --cmake_option="-DBUILD_opencv_photo=OFF" \
+        --cmake_option="-DBUILD_opencv_stitching=OFF" \
+        --cmake_option="-DBUILD_opencv_video=OFF" \
+        --cmake_option="-DBUILD_opencv_videoio=OFF" \
+        --cmake_option="-DBUILD_TESTS=OFF" \
+        --cmake_option="-DBUILD_PERF_TESTS=OFF" \
+        --cmake_option="-DBUILD_EXAMPLES=OFF" \
+        --cmake_option="-DWITH_PNG=OFF" \
+        --cmake_option="-DWITH_JPEG=OFF" \
+        --cmake_option="-DWITH_TIFF=OFF" \
+        --cmake_option="-DWITH_WEBP=OFF" \
+        --cmake_option="-DWITH_IPP=OFF" \
+        --cmake_option="-DCPU_BASELINE=" \
+        --cmake_option="-DCPU_DISPATCH=" \
+        --disable_single_file; echo "OpenCV build completed or failed, continuing..." &&\
+    mkdir -p /emsdk/upstream/lib/clang/$(ls /emsdk/upstream/lib/clang | head -1)/include &&\
+    ln -s /app/libwebp/src/webp /emsdk/upstream/lib/clang/$(ls /emsdk/upstream/lib/clang | head -1)/include/webp &&\
+    cd /app/libexif &&\
+    autoreconf -fiv &&\
+    emconfigure ./configure --disable-shared --enable-static --disable-nls --disable-docs &&\
+    emmake make
+
+# Runtime stage (lightweight)
+FROM build-env AS runtime
+WORKDIR /app
+
+# Copy necessary files from build environment
+COPY --from=build-env /app/libwebp /app/libwebp
+COPY --from=build-env /app/libexif /app/libexif
+COPY --from=build-env /app/opencv /app/opencv
+COPY --from=build-env /emsdk/upstream/lib/clang /emsdk/upstream/lib/clang

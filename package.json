@@ -1,0 +1,147 @@
+{
+  "name": "wasm-image-optimization",
+  "description": "WebP image optimization with OpenCV-powered Lanczos resampling on edge runtime",
+  "version": "2.0.0",
+  "scripts": {
+    "test": "yarn ts-node test",
+    "lint:fix": "eslint --fix src/ && prettier -w src",
+    "build": "tsc && tsc -p ./tsconfig.csj.json && cpy esm dist && tsx bin/build",
+    "build:wasm": "make clean && make",
+    "build:wasm:docker": "docker compose -f docker/docker-compose.yml run --build --rm emcc make -j",
+    "build:wasm:auto": "./scripts/docker-build.sh all",
+    "docker:shell": "docker compose -f docker/docker-compose.yml run --build --rm emcc bash -l",
+    "docker:build-env": "./scripts/docker-build.sh build-env",
+    "docker:dev": "./scripts/docker-build.sh dev",
+    "docker:make": "./scripts/docker-build.sh make",
+    "docker:shell-dev": "./scripts/docker-build.sh shell",
+    "docker:stop": "./scripts/docker-build.sh clean",
+    "docker:arm64": "DOCKERFILE=docker/Dockerfile.arm64 docker compose -f docker/docker-compose.auto.yml run --rm dev make all",
+    "docker:x86": "DOCKERFILE=docker/Dockerfile docker compose -f docker/docker-compose.auto.yml run --rm dev make all"
+  },
+  "exports": {
+    "./esm": {
+      "import": "./dist/esm/index.js",
+      "types": "./dist/esm/index.d.ts"
+    },
+    "./next": {
+      "types": "./dist/next-web-worker/index.d.ts",
+      "browser": "./dist/next-web-worker/index.js",
+      "edge-light": "./dist/next/index.js",
+      "node": "./dist/next/index.js"
+    },
+    "./next-api": {
+      "types": "./dist/next-web-worker/index.d.ts",
+      "browser": "./dist/next-web-worker/index.js",
+      "edge-light": "./dist/next/index.js",
+      "node": "./dist/next/index.js"
+    },
+    "./node": {
+      "types": "./dist/cjs/node/index.d.ts",
+      "default": "./dist/cjs/node/index.js"
+    },
+    "./vite": {
+      "types": "./dist/vite/index.d.ts",
+      "browser": "./dist/vite/index.js",
+      "node": "./dist/dummy/index.js",
+      "default": "./dist/dummy/index.js"
+    },
+    "./vite-plugin": {
+      "types": "./dist/vite-plugin/index.d.ts",
+      "default": "./dist/vite-plugin/index.js"
+    },
+    "./web-worker": {
+      "types": "./dist/vite-web-worker/index.d.ts",
+      "browser": "./dist/vite-web-worker/index.js",
+      "node": "./dist/dummy/index.js"
+    },
+    "./node-worker": {
+      "types": "./dist/cjs/node/cjs-worker.d.ts",
+      "require": "./dist/cjs/node/cjs-worker.js",
+      "import": "./dist/cjs/node/cjs-worker.js"
+    },
+    ".": {
+      "require": {
+        "types": "./dist/cjs/node/index.d.ts",
+        "node": "./dist/cjs/node/index.js",
+        "edge-light": "./dist/esm/index.js",
+        "workerd": "./dist/workers/index.js",
+        "worker": "./dist/workers/index.js",
+        "browser": "./dist/esm/index.js"
+      },
+      "import": {
+        "types": "./dist/cjs/node/index.d.ts",
+        "node": "./dist/cjs/node/index.js",
+        "edge-light": "./dist/esm/index.js",
+        "workerd": "./dist/workers/index.js",
+        "worker": "./dist/workers/index.js",
+        "browser": "./dist/esm/index.js"
+      },
+      "default": {
+        "types": "./dist/workers/index.d.ts",
+        "default": "./dist/workers/index.js"
+      }
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "edge": [
+        "./dist/esm/index.d.ts"
+      ],
+      "next": [
+        "./dist/next-web-worker/index.d.ts"
+      ],
+      "web-worker": [
+        "./dist/vite-web-worker/index.d.ts"
+      ],
+      "node-worker": [
+        "./dist/cjs/node/cjs-worker.d.ts"
+      ],
+      "node": [
+        "./dist/cjs/node/index.d.ts"
+      ],
+      "vite": [
+        "./dist/esm/index.d.ts"
+      ],
+      "*": [
+        "./dist/workers/index.d.ts"
+      ]
+    }
+  },
+  "license": "MIT",
+  "dependencies": {
+    "worker-lib": "2.0.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.26.0",
+    "@types/node": "22.15.3",
+    "@typescript-eslint/eslint-plugin": "^8.31.1",
+    "@typescript-eslint/parser": "^8.31.1",
+    "cpy-cli": "^5.0.0",
+    "esbuild": "0.25.3",
+    "eslint": "9.26.0",
+    "eslint-config-prettier": "^10.1.2",
+    "eslint-import-resolver-typescript": "^4.3.4",
+    "eslint-plugin-import": "^2.31.0",
+    "prettier": "^3.5.3",
+    "ts-node": "^10.9.2",
+    "tsx": "4.19.4",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.31.1",
+    "vite": "6.3.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "webp",
+    "encode",
+    "wasm",
+    "cloudflare",
+    "workers",
+    "WebAssembly"
+  ],
+  "repository": "https://github.com/node-libraries/wasm-image-optimization",
+  "author": "SoraKumo <info@croud.jp>",
+  "main": "index.js",
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
+}

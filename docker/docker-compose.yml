@@ -1,0 +1,48 @@
+services:
+  # Build environment image creation
+  build-env:
+    container_name: wasm-image-build-env
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: build-env
+    environment:
+      - DOCKER_ENV=1
+    image: wasm-image-optimization:build-env
+
+  # Development environment (make execution)
+  dev:
+    container_name: wasm-image-dev
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: runtime
+    environment:
+      - DOCKER_ENV=1
+    volumes:
+      - ../Makefile:/app/Makefile
+      - ../src:/app/src
+      - ../dist:/app/dist
+      - ./.vscode:/app/.vscode
+    command: tail -f /dev/null  # Keep container running in background
+    image: wasm-image-optimization:runtime
+
+  # Legacy one-shot execution (backward compatibility)
+  emcc:
+    container_name: wasm-image-optimization
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+      target: runtime
+    environment:
+      - DOCKER_ENV=1
+    volumes:
+      - wasm-app:/app
+      - wasm-cache:/emsdk/upstream/emscripten/cache
+      - ../Makefile:/app/Makefile
+      - ../src:/app/src
+      - ../dist:/app/dist
+      - ./.vscode:/app/.vscode
+volumes:
+  wasm-app:
+  wasm-cache:

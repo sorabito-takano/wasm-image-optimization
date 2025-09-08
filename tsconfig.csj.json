@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "CommonJS",
+    "outDir": "./dist/cjs"
+  },
+  "exclude": [
+    "node_modules",
+    "bin",
+    "dist",
+    "test",
+    "src/workers",
+    "src/next",
+    "src/next-back",
+    "src/esm",
+    "src/vite",
+    "src/vite-plugin",
+    "src/vite-web-worker",
+    "src/next-web-worker",
+    "eslint.config.mjs",
+    "opencv"
+  ]
+}
