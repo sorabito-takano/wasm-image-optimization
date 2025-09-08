@@ -1,7 +1,7 @@
 {
-  "name": "wasm-image-optimization",
+  "name": "@sorabito-takano/wasm-image-optimization",
   "description": "WebP image optimization with OpenCV-powered Lanczos resampling on edge runtime",
-  "version": "2.0.0",
+  "version": "1.0.3",
   "scripts": {
     "test": "yarn ts-node test",
     "lint:fix": "eslint --fix src/ && prettier -w src",
@@ -140,8 +140,19 @@
     "workers",
     "WebAssembly"
   ],
-  "repository": "https://github.com/node-libraries/wasm-image-optimization",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sorabito-takano/wasm-image-optimization.git"
+  },
   "author": "SoraKumo <info@croud.jp>",
   "main": "index.js",
-  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67"
+  "packageManager": "pnpm@10.15.1+sha512.34e538c329b5553014ca8e8f4535997f96180a1d0f614339357449935350d924e22f8614682191264ec33d1462ac21561aff97f6bb18065351c162c7e8f6de67",
+  "directories": {
+    "doc": "doc",
+    "test": "test"
+  },
+  "bugs": {
+    "url": "https://github.com/sorabito-takano/wasm-image-optimization/issues"
+  },
+  "homepage": "https://github.com/sorabito-takano/wasm-image-optimization#readme"
 }

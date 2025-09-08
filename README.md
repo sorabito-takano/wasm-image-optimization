@@ -69,6 +69,27 @@ launchWorker(): Promise<void>
 setLimit(maxWorkers: number): void   // (exported but previously undocumented)
 ```
 
+### WASM Path Configuration (PWA / Offline Support)
+
+For PWA applications or custom deployment scenarios, you can configure the WebAssembly binary location:
+
+```ts
+import { setWasmUrl, setWasmBinary } from 'wasm-image-optimization/vite';
+
+// Option 1: Set custom WASM URL (useful for PWA Service Worker caching)
+setWasmUrl('/assets/libImage.wasm');
+
+// Option 2: Provide pre-loaded WASM binary
+const wasmBinary = await fetch('/assets/libImage.wasm').then(r => r.arrayBuffer());
+setWasmBinary(wasmBinary);
+
+// Reset to default behavior
+import { resetWasmConfig } from 'wasm-image-optimization/vite';
+resetWasmConfig();
+```
+
+Available in: `vite`, `next`, `workers`, `node` entry points.
+
 ## Vite / Web Worker Integration
 
 For Vite usage include the plugin (adds proper asset copying and worker wiring):

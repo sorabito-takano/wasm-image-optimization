@@ -14,7 +14,9 @@ typings.d.ts
 /image_output
 /.vscode
 /docker
+/scripts
 pnpm-lock.yaml
+pnpm-workspace.yaml
 eslint.config.mjs
 bin
 dist/esm/_*

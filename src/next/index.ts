@@ -1,14 +1,32 @@
 import LibImage from "../cjs/libImage.js";
 import { _optimizeImage, _optimizeImageExt } from "../lib/optimizeImage.js";
-import type { OptimizeParams, OptimizeResult } from "../types/index.js";
-export type { OptimizeParams, OptimizeResult };
+import { getWasmConfig, setWasmUrl, setWasmBinary, resetWasmConfig } from "../types/index.js";
+import type { OptimizeParams, OptimizeResult, WasmConfig } from "../types/index.js";
+export type { OptimizeParams, OptimizeResult, WasmConfig };
+export { setWasmUrl, setWasmBinary, resetWasmConfig };
 
-const getLibImage = async () =>
-  LibImage({
-    wasmBinary: await fetch(
-      "https://cdn.jsdelivr.net/npm/wasm-image-optimization@1.2.18/dist/esm/libImage.wasm",
-    ).then((v) => v.arrayBuffer()),
-  });
+const getLibImage = async () => {
+  const config = getWasmConfig();
+  
+  if (config.wasmBinary) {
+    // Use pre-loaded binary
+    return LibImage({
+      wasmBinary: config.wasmBinary,
+    });
+  } else if (config.wasmUrl) {
+    // Use custom URL
+    return LibImage({
+      wasmBinary: await fetch(config.wasmUrl).then((v) => v.arrayBuffer()),
+    });
+  } else {
+    // Use default CDN URL
+    return LibImage({
+      wasmBinary: await fetch(
+        "https://cdn.jsdelivr.net/npm/wasm-image-optimization@1.2.18/dist/esm/libImage.wasm",
+      ).then((v) => v.arrayBuffer()),
+    });
+  }
+};
 
 export const optimizeImage = async (params: OptimizeParams) =>
   _optimizeImage({ ...params, libImage: getLibImage() });
