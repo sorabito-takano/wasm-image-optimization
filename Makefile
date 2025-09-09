@@ -29,6 +29,7 @@ OPENCV_JS_WASM := opencv/build_js/bin/opencv.wasm
 OPENCV_LIBS := opencv/build_js/lib/libopencv_core.a opencv/build_js/lib/libopencv_imgproc.a
 OPENCV_INCLUDE := -Iopencv/modules/core/include -Iopencv/modules/imgproc/include -Iopencv/build_js
 SOURCE_FILE = src/libImage.cpp
+PILLOW_RESIZE_SOURCE = src/pillow_resize.cpp
 
 CFLAGS = -O3 -msimd128 -sSTACK_SIZE=5MB \
         $(OPENCV_INCLUDE) \
@@ -73,14 +74,14 @@ $(ESMDIR) $(WORKERSDIR):
 
 esm: $(TARGET_ESM)
 
-$(TARGET_ESM): $(SOURCE_FILE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a | $(ESMDIR)
-	emcc $(CFLAGS) $(OPENCV_INCLUDE) -o $@ $< $(WORKDIR)/webp.a $(WORKDIR)/libexif.a $(OPENCV_LIBS) \
+$(TARGET_ESM): $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a | $(ESMDIR)
+	emcc $(CFLAGS) $(OPENCV_INCLUDE) -o $@ $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a $(OPENCV_LIBS) \
        $(CFLAGS_ASM)  -s EXPORT_ES6=1
 
 workers: $(TARGET_WORKERS)
 
-$(TARGET_WORKERS): $(SOURCE_FILE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a | $(WORKERSDIR)
-	emcc $(CFLAGS) $(OPENCV_INCLUDE) -o $@ $< $(WORKDIR)/webp.a $(WORKDIR)/libexif.a $(OPENCV_LIBS) \
+$(TARGET_WORKERS): $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a | $(WORKERSDIR)
+	emcc $(CFLAGS) $(OPENCV_INCLUDE) -o $@ $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a $(OPENCV_LIBS) \
        $(CFLAGS_ASM)
 	@rm $(WORKERSDIR)/$(TARGET_ESM_BASE).wasm
 

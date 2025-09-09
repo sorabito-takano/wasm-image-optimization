@@ -1,6 +1,6 @@
 # wasm-image-optimization
 
-WebAssembly-based image optimization library powered by OpenCV. Primary target is **WebP** (auto lossless for PNG/WebP inputs, lossy otherwise) with optional **JPEG** output and a **pass-through ("none")** mode that returns the original bytes (useful when only resizing info or EXIF-based orientation handling is needed).
+WebAssembly-based image optimization library powered by OpenCV with high-quality Lanczos resampling from [pillow-resize](https://github.com/zurutech/pillow-resize). Primary target is **WebP** (auto lossless for PNG/WebP inputs, lossy otherwise) with optional **JPEG** output and a **pass-through ("none")** mode that returns the original bytes (useful when only resizing info or EXIF-based orientation handling is needed).
 
 - Frontend
 
@@ -17,7 +17,7 @@ WebAssembly-based image optimization library powered by OpenCV. Primary target i
 
 - Input formats (auto-detected): **JPEG / PNG / WebP**
 - Output formats:
-  - `webp`  – Lanczos resize, auto lossless for PNG/WebP sources, lossy otherwise
+  - `webp`  – High-quality Lanczos resize using [pillow-resize](https://github.com/zurutech/pillow-resize) implementation, auto lossless for PNG/WebP sources, lossy otherwise
   - `jpeg`  – Always lossy JPEG (RGB → YCbCr), ignores lossless flag
   - `none`  – Returns original bytes untouched (width/height/EXIF orientation still processed)
 
@@ -181,6 +181,20 @@ https://github.com/SoraKumo001/wasm-image-optimization-samples
 - WebP encoding switches to **lossless** when input is PNG or WebP and output format is `webp`.
 - `format: "none"` returns the original bytes (useful when you only need metadata or want to defer encoding).
 - `quality` only affects lossy paths (WebP lossy / JPEG). Lossless WebP ignores the numeric quality parameter.
+
+## Image Processing Details
+
+This library integrates high-quality image resampling algorithms extracted from [pillow-resize](https://github.com/zurutech/pillow-resize) for superior image quality compared to standard OpenCV resize methods.
+
+### Lanczos Resampling
+
+- **Source**: Extracted and adapted from [zurutech/pillow-resize](https://github.com/zurutech/pillow-resize)
+- **Algorithm**: Lanczos-3 windowed sinc filter
+- **Benefits**: 
+  - Significantly better quality than standard bicubic/bilinear interpolation
+  - Preserves sharp edges and fine details during downscaling
+  - Reduces aliasing artifacts
+- **Fallback**: If pillow-resize fails, automatically falls back to OpenCV's INTER_LANCZOS4
 
 ## Roadmap / TODO
 

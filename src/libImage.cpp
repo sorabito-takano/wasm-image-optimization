@@ -17,6 +17,9 @@
 #include <cstring>
 #include <libexif/exif-data.h>
 
+// Include Pillow Resize for high-quality Lanczos resampling
+#include "pillow_resize.hpp"
+
 using namespace emscripten;
 using namespace cv;
 
@@ -420,8 +423,21 @@ public:
         }
 
         Mat resizedImage;
-        // Use Lanczos algorithm (INTER_LANCZOS4) for high-quality resampling
-        cv::resize(m_image, resizedImage, Size(outWidth, outHeight), 0, 0, INTER_LANCZOS4);
+        
+        try {
+            // Use high-quality Lanczos resampling from pillow-resize
+            resizedImage = PillowResize::resize(m_image, Size(outWidth, outHeight));
+            
+            if (resizedImage.empty()) {
+                js_console_log("Pillow resize failed, falling back to OpenCV");
+                // Fallback to OpenCV resize with INTER_LANCZOS4
+                cv::resize(m_image, resizedImage, Size(outWidth, outHeight), 0, 0, INTER_LANCZOS4);
+            }
+        } catch (const std::exception& e) {
+            js_console_log("Pillow resize exception, falling back to OpenCV");
+            // Fallback to OpenCV resize with INTER_LANCZOS4  
+            cv::resize(m_image, resizedImage, Size(outWidth, outHeight), 0, 0, INTER_LANCZOS4);
+        }
 
         return applyOrientation(resizedImage);
     }

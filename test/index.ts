@@ -28,9 +28,9 @@ const main = async () => {
         console.time(label);
         return optimizeImage({
           image,
-          quality: 75,
+          quality: 80,
           format,
-          width: 512,
+          width: 1536,
         })
           .catch(() => undefined)
           .then((encoded) => {
