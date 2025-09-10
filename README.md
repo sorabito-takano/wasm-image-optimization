@@ -21,8 +21,6 @@ WebAssembly-based image optimization library powered by OpenCV with high-quality
   - `jpeg`  – Always lossy JPEG (RGB → YCbCr), ignores lossless flag
   - `none`  – Returns original bytes untouched (width/height/EXIF orientation still processed)
 
-> NOTE: Current TypeScript type (`OptimizeParams.format`) lists `"webp" | "none"`. The native layer already supports `"jpeg"` and README reflects actual behavior. A future minor release will expand the published type to include `"jpeg"`.
-
 ## Example
 
 https://next-image-convert.vercel.app/  
@@ -104,6 +102,20 @@ export default defineConfig(() => ({
     wasmImageOptimizationPlugin(),
     //wasmImageOptimizationPlugin("build/client/assets") // optional: assetsPath
   ],
+  optimizeDeps: {
+    //...
+    exclude: [
+      //...
+      '@sorabito-takano/wasm-image-optimization'
+    ]
+  },
+  ssr: {
+    //...
+    noExternal: [
+      //...
+      '@sorabito-takano/wasm-image-optimization'
+    ]
+  }
 }));
 ```
 
