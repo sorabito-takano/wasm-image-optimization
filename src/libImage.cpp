@@ -6,7 +6,6 @@
 
 // Include only required OpenCV modules
 #include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
 
 // libjpeg for JPEG decoding
 #include <jpeglib.h>
@@ -16,6 +15,9 @@
 #include <vector>
 #include <cstring>
 #include <libexif/exif-data.h>
+
+// Include simple image processing functions
+#include "simple_imgproc.h"
 
 // Include Pillow Resize for high-quality Lanczos resampling
 #include "pillow_resize.hpp"
@@ -156,7 +158,7 @@ private:
 
         // RGB から BGR への変換
         Mat bgr_image;
-        cvtColor(rgb_image, bgr_image, COLOR_RGB2BGR);
+        simple_imgproc::cvtColor(rgb_image, bgr_image, simple_imgproc::RGB2BGR);
 
         return bgr_image;
     }
@@ -174,7 +176,7 @@ private:
         // RGB から BGR への変換
         Mat rgb_image(height, width, CV_8UC3, decoded);
         Mat bgr_image;
-        cvtColor(rgb_image, bgr_image, COLOR_RGB2BGR);
+        simple_imgproc::cvtColor(rgb_image, bgr_image, simple_imgproc::RGB2BGR);
         
         WebPFree(decoded);
         return bgr_image;
@@ -281,16 +283,16 @@ private:
         // RGBA を BGR に変換 (OpenCV用)
         if (channels == 4) {
             Mat result;
-            cvtColor(image, result, COLOR_RGBA2BGR);
+            simple_imgproc::cvtColor(image, result, simple_imgproc::RGBA2BGR);
             return result;
         } else if (channels == 3) {
             Mat result;
-            cvtColor(image, result, COLOR_RGB2BGR);
+            simple_imgproc::cvtColor(image, result, simple_imgproc::RGB2BGR);
             return result;
         } else {
             // グレースケールをBGRに変換
             Mat result;
-            cvtColor(image, result, COLOR_GRAY2BGR);
+            simple_imgproc::cvtColor(image, result, simple_imgproc::GRAY2BGR);
             return result;
         }
     }
@@ -424,19 +426,12 @@ public:
 
         Mat resizedImage;
         
-        try {
-            // Use high-quality Lanczos resampling from pillow-resize
-            resizedImage = PillowResize::resize(m_image, Size(outWidth, outHeight));
-            
-            if (resizedImage.empty()) {
-                js_console_log("Pillow resize failed, falling back to OpenCV");
-                // Fallback to OpenCV resize with INTER_LANCZOS4
-                cv::resize(m_image, resizedImage, Size(outWidth, outHeight), 0, 0, INTER_LANCZOS4);
-            }
-        } catch (const std::exception& e) {
-            js_console_log("Pillow resize exception, falling back to OpenCV");
-            // Fallback to OpenCV resize with INTER_LANCZOS4  
-            cv::resize(m_image, resizedImage, Size(outWidth, outHeight), 0, 0, INTER_LANCZOS4);
+        // Use high-quality Lanczos resampling from pillow-resize
+        resizedImage = PillowResize::resize(m_image, Size(outWidth, outHeight));
+        
+        if (resizedImage.empty()) {
+            js_console_log("Pillow resize failed");
+            return Mat();
         }
 
         return applyOrientation(resizedImage);
@@ -453,15 +448,15 @@ private:
             break;
         case 3:
             // 180 degrees
-            cv::rotate(image, image, cv::ROTATE_180);
+            simple_imgproc::rotate(image, image, simple_imgproc::ROTATE_180);
             break;
         case 6:
             // 90 degrees clockwise
-            cv::rotate(image, image, cv::ROTATE_90_CLOCKWISE);
+            simple_imgproc::rotate(image, image, simple_imgproc::ROTATE_90_CLOCKWISE);
             break;
         case 8:
             // 90 degrees counter-clockwise
-            cv::rotate(image, image, cv::ROTATE_90_COUNTERCLOCKWISE);
+            simple_imgproc::rotate(image, image, simple_imgproc::ROTATE_90_COUNTERCLOCKWISE);
             break;
         }
 
@@ -580,7 +575,7 @@ std::vector<uint8_t> encodeJPEG(const Mat& image, int quality) {
     
     // BGR to RGB 変換とエンコード
     Mat rgb_image;
-    cvtColor(image, rgb_image, COLOR_BGR2RGB);
+    simple_imgproc::cvtColor(image, rgb_image, simple_imgproc::BGR2RGB);
     
     while (cinfo.next_scanline < cinfo.image_height) {
         JSAMPROW row_pointer = rgb_image.ptr<JSAMPLE>(cinfo.next_scanline);
@@ -607,7 +602,7 @@ std::vector<uint8_t> encodeWEBP(const Mat& image, float quality, bool lossless) 
     
     // BGR to RGB 変換
     Mat rgb_image;
-    cvtColor(image, rgb_image, COLOR_BGR2RGB);
+    simple_imgproc::cvtColor(image, rgb_image, simple_imgproc::BGR2RGB);
     
     uint8_t* webpData = nullptr;
     size_t webpSize = 0;

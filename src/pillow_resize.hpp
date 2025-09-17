@@ -2,7 +2,6 @@
 #define PILLOW_RESIZE_HPP
 
 #include <opencv2/core.hpp>
-#include <opencv2/imgproc.hpp>
 #include <memory>
 #include <vector>
 #include <cmath>
