@@ -3,9 +3,9 @@
 
 namespace simple_imgproc {
 
-void cvtColor(const cv::Mat& src, cv::Mat& dst, ColorConversion conversion) {
-    int rows = src.rows;
-    int cols = src.cols;
+void cvtColor(const SimpleImage& src, SimpleImage& dst, ColorConversion conversion) {
+    int rows = src.rows();
+    int cols = src.cols();
     
     switch (conversion) {
         case RGB2BGR:
@@ -13,7 +13,7 @@ void cvtColor(const cv::Mat& src, cv::Mat& dst, ColorConversion conversion) {
             // RGB <-> BGR swap (same operation)
             if (src.channels() != 3) return;
             
-            dst.create(rows, cols, CV_8UC3);
+            dst.create(rows, cols, SIMPLE_8UC3);
             
             for (int i = 0; i < rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);
@@ -32,7 +32,7 @@ void cvtColor(const cv::Mat& src, cv::Mat& dst, ColorConversion conversion) {
         case RGBA2BGR: {
             if (src.channels() != 4) return;
             
-            dst.create(rows, cols, CV_8UC3);
+            dst.create(rows, cols, SIMPLE_8UC3);
             
             for (int i = 0; i < rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);
@@ -53,7 +53,7 @@ void cvtColor(const cv::Mat& src, cv::Mat& dst, ColorConversion conversion) {
         case GRAY2BGR: {
             if (src.channels() != 1) return;
             
-            dst.create(rows, cols, CV_8UC3);
+            dst.create(rows, cols, SIMPLE_8UC3);
             
             for (int i = 0; i < rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);
@@ -72,14 +72,14 @@ void cvtColor(const cv::Mat& src, cv::Mat& dst, ColorConversion conversion) {
     }
 }
 
-void rotate(const cv::Mat& src, cv::Mat& dst, RotationType rotation) {
-    int src_rows = src.rows;
-    int src_cols = src.cols;
+void rotate(const SimpleImage& src, SimpleImage& dst, RotationType rotation) {
+    int src_rows = src.rows();
+    int src_cols = src.cols();
     int channels = src.channels();
     
     switch (rotation) {
         case ROTATE_90_CLOCKWISE: {
-            dst.create(src_cols, src_rows, src.type());
+            dst.create(src_cols, src_rows, channels);
             
             for (int i = 0; i < src_rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);
@@ -96,7 +96,7 @@ void rotate(const cv::Mat& src, cv::Mat& dst, RotationType rotation) {
         }
         
         case ROTATE_180: {
-            dst.create(src_rows, src_cols, src.type());
+            dst.create(src_rows, src_cols, channels);
             
             for (int i = 0; i < src_rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);
@@ -115,7 +115,7 @@ void rotate(const cv::Mat& src, cv::Mat& dst, RotationType rotation) {
         }
         
         case ROTATE_90_COUNTERCLOCKWISE: {
-            dst.create(src_cols, src_rows, src.type());
+            dst.create(src_cols, src_rows, channels);
             
             for (int i = 0; i < src_rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);

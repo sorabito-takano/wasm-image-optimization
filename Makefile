@@ -25,18 +25,17 @@ EXIF_SOURCES := $(wildcard $(LIBEXIF_PATH)/libexif/*.c) \
 OPENCV_JS_LIB := opencv/build_js/bin/opencv.js
 OPENCV_JS_WASM := opencv/build_js/bin/opencv.wasm
 
-# Use OpenCV.js headers (core only, imgproc removed)
-OPENCV_LIBS := opencv/build_js/lib/libopencv_core.a
-OPENCV_INCLUDE := -Iopencv/modules/core/include -Iopencv/build_js
+# Use only core headers (OpenCV core library removed)
+OPENCV_LIBS := 
+OPENCV_INCLUDE := 
 SOURCE_FILE = src/libImage.cpp
 PILLOW_RESIZE_SOURCE = src/pillow_resize.cpp
 SIMPLE_IMGPROC_SOURCE = src/simple_imgproc.cpp
+SIMPLE_IMAGE_HEADER = src/simple_image.h
 
 CFLAGS = -Oz --closure 1 -msimd128 -sSTACK_SIZE=5MB \
-        $(OPENCV_INCLUDE) \
         -Ilibwebp -Ilibwebp/src $(LIBEXIF_INCLUDE) \
-        -sUSE_LIBJPEG=1 -sUSE_LIBPNG=1 \
-        -DOPENCV_WEBP_ONLY
+        -sUSE_LIBJPEG=1 -sUSE_LIBPNG=1
 
 CFLAGS_ASM = --bind \
              -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web -s DYNAMIC_EXECUTION=0 -s MODULARIZE=1
@@ -76,13 +75,13 @@ $(ESMDIR) $(WORKERSDIR):
 esm: $(TARGET_ESM)
 
 $(TARGET_ESM): $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(SIMPLE_IMGPROC_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a | $(ESMDIR)
-	emcc $(CFLAGS) $(OPENCV_INCLUDE) -o $@ $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(SIMPLE_IMGPROC_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a $(OPENCV_LIBS) \
+	emcc $(CFLAGS) -o $@ $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(SIMPLE_IMGPROC_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a \
        $(CFLAGS_ASM)  -s EXPORT_ES6=1
 
 workers: $(TARGET_WORKERS)
 
 $(TARGET_WORKERS): $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(SIMPLE_IMGPROC_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a | $(WORKERSDIR)
-	emcc $(CFLAGS) $(OPENCV_INCLUDE) -o $@ $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(SIMPLE_IMGPROC_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a $(OPENCV_LIBS) \
+	emcc $(CFLAGS) -o $@ $(SOURCE_FILE) $(PILLOW_RESIZE_SOURCE) $(SIMPLE_IMGPROC_SOURCE) $(WORKDIR)/webp.a $(WORKDIR)/libexif.a \
        $(CFLAGS_ASM)
 	@rm $(WORKERSDIR)/$(TARGET_ESM_BASE).wasm
 

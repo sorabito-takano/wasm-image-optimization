@@ -1,7 +1,7 @@
 #ifndef SIMPLE_IMGPROC_H
 #define SIMPLE_IMGPROC_H
 
-#include <opencv2/core.hpp>
+#include "simple_image.h"
 #include <cstdint>
 
 namespace simple_imgproc {
@@ -22,10 +22,10 @@ enum RotationType {
 };
 
 // Simple color conversion function
-void cvtColor(const cv::Mat& src, cv::Mat& dst, ColorConversion conversion);
+void cvtColor(const SimpleImage& src, SimpleImage& dst, ColorConversion conversion);
 
 // Simple rotation function
-void rotate(const cv::Mat& src, cv::Mat& dst, RotationType rotation);
+void rotate(const SimpleImage& src, SimpleImage& dst, RotationType rotation);
 
 } // namespace simple_imgproc
 

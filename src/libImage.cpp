@@ -4,8 +4,8 @@
 #include <webp/encode.h>
 #include <webp/decode.h>
 
-// Include only required OpenCV modules
-#include <opencv2/core.hpp>
+#include <webp/encode.h>
+#include <webp/decode.h>
 
 // libjpeg for JPEG decoding
 #include <jpeglib.h>
@@ -18,12 +18,12 @@
 
 // Include simple image processing functions
 #include "simple_imgproc.h"
+#include "simple_image.h"
 
 // Include Pillow Resize for high-quality Lanczos resampling
 #include "pillow_resize.hpp"
 
 using namespace emscripten;
-using namespace cv;
 
 EM_JS(void, js_console_log, (const char *str), {
     console.log(UTF8ToString(str));
@@ -115,14 +115,14 @@ void releaseResult()
 class ImageProcessor
 {
 private:
-    Mat m_image;
+    SimpleImage m_image;
     float m_originalWidth;
     float m_originalHeight;
     int m_orientation;
     ImageFormat m_inputFormat;
 
     // JPEG デコード (既存の実装)
-    Mat decodeJPEG(const uint8_t* data, size_t size) {
+    SimpleImage decodeJPEG(const uint8_t* data, size_t size) {
         // JPEGデコード構造体の初期化
         struct jpeg_decompress_struct cinfo;
         struct jpeg_error_mgr jerr;
@@ -143,8 +143,8 @@ private:
         int height = cinfo.output_height;
         int channels = cinfo.output_components;
 
-        // OpenCV Matを作成（RGBで受け取る）
-        Mat rgb_image(height, width, CV_8UC3);
+        // SimpleImageを作成（RGBで受け取る）
+        SimpleImage rgb_image(height, width, SIMPLE_8UC3);
 
         // 行ごとに読み込み
         while (cinfo.output_scanline < cinfo.output_height) {
@@ -157,25 +157,25 @@ private:
         jpeg_destroy_decompress(&cinfo);
 
         // RGB から BGR への変換
-        Mat bgr_image;
+        SimpleImage bgr_image;
         simple_imgproc::cvtColor(rgb_image, bgr_image, simple_imgproc::RGB2BGR);
 
         return bgr_image;
     }
 
     // WEBP デコード
-    Mat decodeWEBP(const uint8_t* data, size_t size) {
+    SimpleImage decodeWEBP(const uint8_t* data, size_t size) {
         int width, height;
         // RGBで直接デコード（アルファチャンネルを避ける）
         uint8_t* decoded = WebPDecodeRGB(data, size, &width, &height);
         
         if (!decoded) {
-            return Mat();
+            return SimpleImage();
         }
 
         // RGB から BGR への変換
-        Mat rgb_image(height, width, CV_8UC3, decoded);
-        Mat bgr_image;
+        SimpleImage rgb_image(height, width, SIMPLE_8UC3, decoded);
+        SimpleImage bgr_image;
         simple_imgproc::cvtColor(rgb_image, bgr_image, simple_imgproc::RGB2BGR);
         
         WebPFree(decoded);
@@ -183,26 +183,26 @@ private:
     }
 
     // PNG デコード (libpng使用)
-    Mat decodePNG(const uint8_t* data, size_t size) {
+    SimpleImage decodePNG(const uint8_t* data, size_t size) {
         // PNG読み込み用の構造体を初期化
         png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
         if (!png) {
             js_console_log("Failed to create PNG read struct");
-            return Mat();
+            return SimpleImage();
         }
 
         png_infop info = png_create_info_struct(png);
         if (!info) {
             png_destroy_read_struct(&png, nullptr, nullptr);
             js_console_log("Failed to create PNG info struct");
-            return Mat();
+            return SimpleImage();
         }
 
         // エラーハンドリング
         if (setjmp(png_jmpbuf(png))) {
             png_destroy_read_struct(&png, &info, nullptr);
             js_console_log("PNG decoding error");
-            return Mat();
+            return SimpleImage();
         }
 
         // メモリからの読み込み設定
@@ -254,20 +254,20 @@ private:
 
         png_read_update_info(png, info);
 
-        // OpenCV Matを作成
+        // SimpleImageを作成
         int channels = png_get_channels(png, info);
-        Mat image;
+        SimpleImage image;
         
         if (channels == 3) {
-            image = Mat(height, width, CV_8UC3);
+            image = SimpleImage(height, width, SIMPLE_8UC3);
         } else if (channels == 4) {
-            image = Mat(height, width, CV_8UC4);
+            image = SimpleImage(height, width, SIMPLE_8UC4);
         } else if (channels == 1) {
-            image = Mat(height, width, CV_8UC1);
+            image = SimpleImage(height, width, SIMPLE_8UC1);
         } else {
             png_destroy_read_struct(&png, &info, nullptr);
             js_console_log("Unsupported PNG channel count");
-            return Mat();
+            return SimpleImage();
         }
 
         // 行ごとに読み込み
@@ -280,18 +280,18 @@ private:
         png_read_end(png, nullptr);
         png_destroy_read_struct(&png, &info, nullptr);
 
-        // RGBA を BGR に変換 (OpenCV用)
+        // RGBA を BGR に変換
         if (channels == 4) {
-            Mat result;
+            SimpleImage result;
             simple_imgproc::cvtColor(image, result, simple_imgproc::RGBA2BGR);
             return result;
         } else if (channels == 3) {
-            Mat result;
+            SimpleImage result;
             simple_imgproc::cvtColor(image, result, simple_imgproc::RGB2BGR);
             return result;
         } else {
             // グレースケールをBGRに変換
-            Mat result;
+            SimpleImage result;
             simple_imgproc::cvtColor(image, result, simple_imgproc::GRAY2BGR);
             return result;
         }
@@ -334,8 +334,8 @@ public:
             return;
         }
 
-        m_originalWidth = static_cast<float>(m_image.cols);
-        m_originalHeight = static_cast<float>(m_image.rows);
+        m_originalWidth = static_cast<float>(m_image.cols());
+        m_originalHeight = static_cast<float>(m_image.rows());
     }
 
     int getOrientation(const char *data, size_t size)
@@ -360,15 +360,15 @@ public:
         return !m_image.empty();
     }
 
-    Mat resize(float width, float height)
+    SimpleImage resize(float width, float height)
     {
         if (m_image.empty())
         {
-            return Mat();
+            return SimpleImage();
         }
 
-        int originalWidth = m_image.cols;
-        int originalHeight = m_image.rows;
+        int originalWidth = m_image.cols();
+        int originalHeight = m_image.rows();
         int outWidth = static_cast<int>(width);
         int outHeight = static_cast<int>(height);
 
@@ -424,21 +424,21 @@ public:
             outHeight = originalHeight;
         }
 
-        Mat resizedImage;
+        SimpleImage resizedImage;
         
         // Use high-quality Lanczos resampling from pillow-resize
-        resizedImage = PillowResize::resize(m_image, Size(outWidth, outHeight));
+        resizedImage = PillowResize::resize(m_image, SimpleSize(outWidth, outHeight));
         
         if (resizedImage.empty()) {
             js_console_log("Pillow resize failed");
-            return Mat();
+            return SimpleImage();
         }
 
         return applyOrientation(resizedImage);
     }
 
 private:
-    Mat applyOrientation(Mat image)
+    SimpleImage applyOrientation(SimpleImage image)
     {
         // rotate image if needed
         switch (m_orientation)
@@ -466,13 +466,13 @@ private:
 public:
     float getOriginalWidth() const { return m_originalWidth; }
     float getOriginalHeight() const { return m_originalHeight; }
-    Mat getImage() const { return m_image; }
+    SimpleImage getImage() const { return m_image; }
     ImageFormat getInputFormat() const { return m_inputFormat; }
 };
 
 // 前方宣言
-std::vector<uint8_t> encodeJPEG(const Mat& image, int quality);
-std::vector<uint8_t> encodeWEBP(const Mat& image, float quality, bool lossless);
+std::vector<uint8_t> encodeJPEG(const SimpleImage& image, int quality);
+std::vector<uint8_t> encodeWEBP(const SimpleImage& image, float quality, bool lossless);
 
 val optimize(std::string imgData, float width, float height, float quality, std::string format)
 {
@@ -494,17 +494,17 @@ val optimize(std::string imgData, float width, float height, float quality, std:
     // "none" format: 元画像をそのまま返す（サイズ変更なし）
     if (format == "none")
     {
-        Mat originalImage = processor.getImage();
+        SimpleImage originalImage = processor.getImage();
         return createResult(imgData.size(),
                             reinterpret_cast<const uint8_t *>(imgData.c_str()),
                             processor.getOriginalWidth(),
                             processor.getOriginalHeight(),
-                            static_cast<float>(originalImage.cols),
-                            static_cast<float>(originalImage.rows));
+                            static_cast<float>(originalImage.cols()),
+                            static_cast<float>(originalImage.rows()));
     }
 
     // Resize image using Lanczos algorithm
-    Mat processedImage = processor.resize(width, height);
+    SimpleImage processedImage = processor.resize(width, height);
 
     if (processedImage.empty())
     {
@@ -539,14 +539,14 @@ val optimize(std::string imgData, float width, float height, float quality, std:
     val result = createResult(encodedData.size(), encodedData.data(),
                               processor.getOriginalWidth(),
                               processor.getOriginalHeight(),
-                              static_cast<float>(processedImage.cols),
-                              static_cast<float>(processedImage.rows));
+                              static_cast<float>(processedImage.cols()),
+                              static_cast<float>(processedImage.rows()));
 
     return result;
 }
 
 // JPEG エンコード関数
-std::vector<uint8_t> encodeJPEG(const Mat& image, int quality) {
+std::vector<uint8_t> encodeJPEG(const SimpleImage& image, int quality) {
     std::vector<uint8_t> result;
     
     // JPEG圧縮用の構造体を初期化
@@ -562,8 +562,8 @@ std::vector<uint8_t> encodeJPEG(const Mat& image, int quality) {
     jpeg_mem_dest(&cinfo, &outbuffer, &outsize);
     
     // 画像サイズと形式の設定
-    cinfo.image_width = image.cols;
-    cinfo.image_height = image.rows;
+    cinfo.image_width = image.cols();
+    cinfo.image_height = image.rows();
     cinfo.input_components = 3;
     cinfo.in_color_space = JCS_RGB;
     
@@ -574,7 +574,7 @@ std::vector<uint8_t> encodeJPEG(const Mat& image, int quality) {
     jpeg_start_compress(&cinfo, TRUE);
     
     // BGR to RGB 変換とエンコード
-    Mat rgb_image;
+    SimpleImage rgb_image;
     simple_imgproc::cvtColor(image, rgb_image, simple_imgproc::BGR2RGB);
     
     while (cinfo.next_scanline < cinfo.image_height) {
@@ -597,11 +597,11 @@ std::vector<uint8_t> encodeJPEG(const Mat& image, int quality) {
 }
 
 // WEBP エンコード関数（可逆・非可逆対応）
-std::vector<uint8_t> encodeWEBP(const Mat& image, float quality, bool lossless) {
+std::vector<uint8_t> encodeWEBP(const SimpleImage& image, float quality, bool lossless) {
     std::vector<uint8_t> result;
     
     // BGR to RGB 変換
-    Mat rgb_image;
+    SimpleImage rgb_image;
     simple_imgproc::cvtColor(image, rgb_image, simple_imgproc::BGR2RGB);
     
     uint8_t* webpData = nullptr;
@@ -609,12 +609,12 @@ std::vector<uint8_t> encodeWEBP(const Mat& image, float quality, bool lossless) 
     
     if (lossless) {
         // 可逆圧縮
-        webpSize = WebPEncodeLosslessRGB(rgb_image.data, rgb_image.cols, rgb_image.rows, 
-                                       rgb_image.cols * 3, &webpData);
+        webpSize = WebPEncodeLosslessRGB(rgb_image.data(), rgb_image.cols(), rgb_image.rows(), 
+                                       rgb_image.cols() * 3, &webpData);
     } else {
         // 非可逆圧縮（既存の実装）
-        webpSize = WebPEncodeRGB(rgb_image.data, rgb_image.cols, rgb_image.rows, 
-                                rgb_image.cols * 3, quality, &webpData);
+        webpSize = WebPEncodeRGB(rgb_image.data(), rgb_image.cols(), rgb_image.rows(), 
+                                rgb_image.cols() * 3, quality, &webpData);
     }
     
     if (webpSize > 0 && webpData) {

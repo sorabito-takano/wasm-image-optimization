@@ -1,7 +1,7 @@
 #ifndef PILLOW_RESIZE_HPP
 #define PILLOW_RESIZE_HPP
 
-#include <opencv2/core.hpp>
+#include "simple_image.h"
 #include <memory>
 #include <vector>
 #include <cmath>
@@ -51,22 +51,22 @@ namespace PillowResize {
     
     // Horizontal resampling function
     template<typename T>
-    void resampleHorizontal(cv::Mat& im_out,
-                           const cv::Mat& im_in,
+    void resampleHorizontal(SimpleImage& im_out,
+                           const SimpleImage& im_in,
                            int32_t offset,
                            int32_t ksize,
                            const std::vector<int32_t>& bounds,
                            const std::vector<double>& kk);
     
-    // Vertical resampling function  
-    void resampleVertical(cv::Mat& im_out,
-                         const cv::Mat& im_in,
+    // Vertical resampling function
+    void resampleVertical(SimpleImage& im_out,
+                         const SimpleImage& im_in,
                          int32_t ksize,
                          const std::vector<int32_t>& bounds,
                          const std::vector<double>& kk);
     
     // Main resize function using Lanczos resampling
-    cv::Mat resize(const cv::Mat& src, const cv::Size& out_size);
+    SimpleImage resize(const SimpleImage& src, const SimpleSize& out_size);
 }
 
 #endif // PILLOW_RESIZE_HPP
