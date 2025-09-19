@@ -1,6 +1,6 @@
 # wasm-image-optimization
 
-WebAssembly-based image optimization library powered by OpenCV with high-quality Lanczos resampling from [pillow-resize](https://github.com/zurutech/pillow-resize). Primary target is **WebP** (auto lossless for PNG/WebP inputs, lossy otherwise) with optional **JPEG** output and a **pass-through ("none")** mode that returns the original bytes (useful when only resizing info or EXIF-based orientation handling is needed).
+WebAssembly-based image optimization library with a **custom minimal resize core** (OpenCV runtime removed) using extracted high-quality Lanczos resampling logic from [pillow-resize](https://github.com/zurutech/pillow-resize). Primary target is **WebP** (auto lossless for PNG/WebP inputs, lossy otherwise) with optional **JPEG** output and a **pass-through ("none")** mode that returns the original bytes (useful when only resizing info or EXIF-based orientation handling is needed).
 
 - Frontend
 
@@ -196,23 +196,44 @@ https://github.com/SoraKumo001/wasm-image-optimization-samples
 
 ## Image Processing Details
 
-This library integrates high-quality image resampling algorithms extracted from [pillow-resize](https://github.com/zurutech/pillow-resize) for superior image quality compared to standard OpenCV resize methods.
+This library integrates high-quality image resampling algorithms extracted from [pillow-resize](https://github.com/zurutech/pillow-resize) for superior image quality compared to typical naive or bilinear scaling approaches. **OpenCV is no longer shipped** to drastically reduce WASM size.
 
-### Lanczos Resampling
+### Minimal Resize Core & Lanczos Resampling
 
-- **Source**: Extracted and adapted from [zurutech/pillow-resize](https://github.com/zurutech/pillow-resize)
-- **Algorithm**: Lanczos-3 windowed sinc filter
-- **Benefits**: 
-  - Significantly better quality than standard bicubic/bilinear interpolation
-  - Preserves sharp edges and fine details during downscaling
-  - Reduces aliasing artifacts
-- **Fallback**: If pillow-resize fails, automatically falls back to OpenCV's INTER_LANCZOS4
+| Aspect | Before (OpenCV based) | Now (Custom minimal core) |
+|--------|-----------------------|---------------------------|
+| WASM size (typical) | ~1.5 MB | ~ (significantly smaller)* |
+| Dependency | OpenCV (core/imgproc subset) | Hand-extracted resize pipeline |
+| Filter | OpenCV Lanczos / fallback logic | Direct Lanczos-3 implementation |
+| Fallback path | OpenCV INTER_LANCZOS4 | Removed (deterministic path) |
+
+*Exact size depends on build flags; OpenCV code paths, alloc helpers, and unused kernels removed.
+
+#### Key Points
+- Only the math & buffer ops needed for Lanczos-3 down/upsampling are compiled.
+- No dynamic dispatch / no unused interpolation kernels.
+- Deterministic single path (no runtime fallback → smaller + predictable output).
+- Implements horizontal + vertical separable filtering with windowed sinc (Lanczos radius=3).
+- Designed for future extension (e.g. optional Mitchell / Catmull-Rom) without pulling large frameworks.
+
+#### Why remove OpenCV?
+- Large binary footprint (initial builds ~1.5MB → unacceptable for some edge/PWA budgets)
+- Only resize + color conversion were used.
+- Custom path eliminates build complexity (Python + CMake toolchain for OpenCV JS).
+- Faster cold start under Service Worker / edge runtime due to reduced instantiation cost.
+
+#### Quality
+Lanczos-3 maintains sharpness while minimizing ringing for photographic sources. For heavy downscales (<25%) you may still apply an external pre-blur if aggressive aliasing in source exists.
+
+> If you previously relied on OpenCV-specific behavior (e.g. other interpolation modes), migrate by calling `optimizeImage` with the same resize parameters — behavior is now unified.
 
 ## Roadmap / TODO
 
-- Update published TypeScript types to include `"jpeg"` in `OptimizeParams.format`.
+- Expose pluggable resize kernels (Mitchell, Catmull-Rom, Lanczos-2).
 - Optional AVIF output (investigation phase).
-- WASM size reduction via tree-shaken OpenCV custom build.
+- SIMD tuned inner loops for Lanczos (current version already uses -msimd128 at compile but kernel still scalar in places).
+- Update published TypeScript types to include `"jpeg"` (if not already updated in release at read time).
+- Optional prefilter for extreme downscale scenarios.
 
 ---
 MIT License

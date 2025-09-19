@@ -1,7 +1,7 @@
 {
   "name": "@sorabito-takano/wasm-image-optimization",
   "description": "WebP image optimization with OpenCV-powered Lanczos resampling on edge runtime",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "scripts": {
     "test": "yarn ts-node test",
     "lint:fix": "eslint --fix src/ && prettier -w src",
