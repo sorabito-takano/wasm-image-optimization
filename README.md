@@ -1,6 +1,6 @@
 # wasm-image-optimization
 
-WebAssembly-based image optimization library with a **custom minimal resize core** (OpenCV runtime removed) using extracted high-quality Lanczos resampling logic from [pillow-resize](https://github.com/zurutech/pillow-resize). Primary target is **WebP** (auto lossless for PNG/WebP inputs, lossy otherwise) with optional **JPEG** output and a **pass-through ("none")** mode that returns the original bytes (useful when only resizing info or EXIF-based orientation handling is needed).
+WebAssembly-based image optimization library with a **custom minimal resize core** (OpenCV runtime removed for smaller wasm size) using extracted high-quality Lanczos resampling logic from [pillow-resize](https://github.com/zurutech/pillow-resize). Primary target is **WebP** (auto lossless for PNG/WebP inputs, lossy otherwise) with optional **JPEG** output and a **pass-through ("none")** mode that returns the original bytes (useful when only resizing info or EXIF-based orientation handling is needed).
 
 - Frontend
 

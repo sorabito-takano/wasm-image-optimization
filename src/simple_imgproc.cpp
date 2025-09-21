@@ -84,7 +84,10 @@ void rotate(const SimpleImage& src, SimpleImage& dst, RotationType rotation) {
             for (int i = 0; i < src_rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);
                 for (int j = 0; j < src_cols; j++) {
-                    uint8_t* dst_pixel = dst.ptr<uint8_t>(j) + (src_rows - 1 - i) * channels;
+                    // Correct transformation: (i,j) -> (j, src_rows-1-i)
+                    int dst_row = j;
+                    int dst_col = src_rows - 1 - i;
+                    uint8_t* dst_pixel = dst.ptr<uint8_t>(dst_row) + dst_col * channels;
                     const uint8_t* src_pixel = src_row + j * channels;
                     
                     for (int c = 0; c < channels; c++) {
@@ -120,7 +123,10 @@ void rotate(const SimpleImage& src, SimpleImage& dst, RotationType rotation) {
             for (int i = 0; i < src_rows; i++) {
                 const uint8_t* src_row = src.ptr<uint8_t>(i);
                 for (int j = 0; j < src_cols; j++) {
-                    uint8_t* dst_pixel = dst.ptr<uint8_t>(src_cols - 1 - j) + i * channels;
+                    // Correct transformation: (i,j) -> (src_cols-1-j, i)
+                    int dst_row = src_cols - 1 - j;
+                    int dst_col = i;
+                    uint8_t* dst_pixel = dst.ptr<uint8_t>(dst_row) + dst_col * channels;
                     const uint8_t* src_pixel = src_row + j * channels;
                     
                     for (int c = 0; c < channels; c++) {

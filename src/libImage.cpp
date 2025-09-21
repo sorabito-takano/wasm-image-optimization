@@ -448,15 +448,27 @@ private:
             break;
         case 3:
             // 180 degrees
-            simple_imgproc::rotate(image, image, simple_imgproc::ROTATE_180);
+            {
+                SimpleImage rotated;
+                simple_imgproc::rotate(image, rotated, simple_imgproc::ROTATE_180);
+                image = rotated;
+            }
             break;
         case 6:
             // 90 degrees clockwise
-            simple_imgproc::rotate(image, image, simple_imgproc::ROTATE_90_CLOCKWISE);
+            {
+                SimpleImage rotated;
+                simple_imgproc::rotate(image, rotated, simple_imgproc::ROTATE_90_CLOCKWISE);
+                image = rotated;
+            }
             break;
         case 8:
             // 90 degrees counter-clockwise
-            simple_imgproc::rotate(image, image, simple_imgproc::ROTATE_90_COUNTERCLOCKWISE);
+            {
+                SimpleImage rotated;
+                simple_imgproc::rotate(image, rotated, simple_imgproc::ROTATE_90_COUNTERCLOCKWISE);
+                image = rotated;
+            }
             break;
         }
 
