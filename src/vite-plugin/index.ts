@@ -11,7 +11,7 @@ export default (assetsPath?: string): Plugin[] => {
       config: () => {
         return {
           optimizeDeps: {
-            exclude: ["wasm-image-optimization"],
+            exclude: ["@sorabito-takano/wasm-image-optimization"],
           },
         };
       },

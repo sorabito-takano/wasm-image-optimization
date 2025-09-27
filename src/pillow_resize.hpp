@@ -10,6 +10,18 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// WASM SIMD support detection
+#ifdef __wasm__
+    #ifdef __wasm_simd128__
+        #include <wasm_simd128.h>
+        #define HAVE_WASM_SIMD 1
+    #else
+        #define HAVE_WASM_SIMD 0
+    #endif
+#else
+    #define HAVE_WASM_SIMD 0
+#endif
+
 namespace PillowResize {
     // Lanczos filter implementation extracted from pillow-resize
     class LanczosFilter {
@@ -49,6 +61,9 @@ namespace PillowResize {
     // Optimized clipping function for 8-bit values
     uint8_t clip8(double in);
     
+    // SIMD-optimized clip function for multiple values
+    void clip8_simd(const double* input, uint8_t* output, int count);
+    
     // Horizontal resampling function
     template<typename T>
     void resampleHorizontal(SimpleImage& im_out,
@@ -59,11 +74,31 @@ namespace PillowResize {
                            const std::vector<double>& kk);
     
     // Vertical resampling function
+    template<typename T>
     void resampleVertical(SimpleImage& im_out,
                          const SimpleImage& im_in,
+                         int32_t offset,
                          int32_t ksize,
                          const std::vector<int32_t>& bounds,
                          const std::vector<double>& kk);
+
+#if HAVE_WASM_SIMD
+    // SIMD-optimized horizontal resampling
+    void resampleHorizontalSIMD(SimpleImage& im_out,
+                                const SimpleImage& im_in,
+                                int32_t offset,
+                                int32_t ksize,
+                                const std::vector<int32_t>& bounds,
+                                const std::vector<double>& kk);
+    
+    // SIMD-optimized vertical resampling
+    void resampleVerticalSIMD(SimpleImage& im_out,
+                             const SimpleImage& im_in,
+                             int32_t offset,
+                             int32_t ksize,
+                             const std::vector<int32_t>& bounds,
+                             const std::vector<double>& kk);
+#endif
     
     // Main resize function using Lanczos resampling
     SimpleImage resize(const SimpleImage& src, const SimpleSize& out_size);

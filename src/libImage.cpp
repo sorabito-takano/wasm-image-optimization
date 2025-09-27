@@ -16,6 +16,18 @@
 #include <cstring>
 #include <libexif/exif-data.h>
 
+// WASM SIMD support
+#ifdef __wasm__
+    #ifdef __wasm_simd128__
+        #include <wasm_simd128.h>
+        #define HAVE_WASM_SIMD 1
+    #else
+        #define HAVE_WASM_SIMD 0
+    #endif
+#else
+    #define HAVE_WASM_SIMD 0
+#endif
+
 // Include simple image processing functions
 #include "simple_imgproc.h"
 #include "simple_image.h"
@@ -28,6 +40,125 @@ using namespace emscripten;
 EM_JS(void, js_console_log, (const char *str), {
     console.log(UTF8ToString(str));
 });
+
+#if HAVE_WASM_SIMD
+// SIMD-optimized BGR to RGB conversion
+void convertBGRtoRGB_SIMD(const SimpleImage& src, SimpleImage& dst) {
+    if (src.channels() != 3) {
+        // Fallback to non-SIMD for non-RGB images
+        simple_imgproc::cvtColor(src, dst, simple_imgproc::BGR2RGB);
+        return;
+    }
+    
+    dst.create(src.rows(), src.cols(), src.channels());
+    
+    const int width = src.cols();
+    const int height = src.rows();
+    const int total_pixels = width * height;
+    
+    const uint8_t* src_data = src.data();
+    uint8_t* dst_data = dst.data();
+    
+    int i = 0;
+    // Process 16 bytes (5+ pixels) at a time with SIMD
+    for (; i <= total_pixels * 3 - 16; i += 12) {
+        // Load 12 bytes (4 BGR pixels)
+        v128_t bgr_pixels = wasm_v128_load(src_data + i);
+        
+        // Extract B, G, R channels
+        // BGR BGR BGR BGR -> B0G0R0B1 G1R1B2G2 R2B3G3R3
+        v128_t shuffled = wasm_i8x16_shuffle(bgr_pixels,
+            wasm_i32x4_splat(0), // dummy second vector
+            2, 1, 0,    // R0 G0 B0
+            5, 4, 3,    // R1 G1 B1  
+            8, 7, 6,    // R2 G2 B2
+            11, 10, 9,  // R3 G3 B3
+            14, 13, 12, // Partial next pixel
+            15          // Padding
+        );
+        
+        // Store converted RGB data
+        wasm_v128_store(dst_data + i, shuffled);
+    }
+    
+    // Process remaining pixels with scalar code
+    for (; i < total_pixels * 3; i += 3) {
+        uint8_t b = src_data[i];
+        uint8_t g = src_data[i + 1];
+        uint8_t r = src_data[i + 2];
+        
+        dst_data[i] = r;     // R
+        dst_data[i + 1] = g; // G
+        dst_data[i + 2] = b; // B
+    }
+}
+
+// SIMD-optimized RGB to BGR conversion
+void convertRGBtoBGR_SIMD(const SimpleImage& src, SimpleImage& dst) {
+    if (src.channels() != 3) {
+        // Fallback to non-SIMD for non-RGB images
+        simple_imgproc::cvtColor(src, dst, simple_imgproc::RGB2BGR);
+        return;
+    }
+    
+    dst.create(src.rows(), src.cols(), src.channels());
+    
+    const int width = src.cols();
+    const int height = src.rows();
+    const int total_pixels = width * height;
+    
+    const uint8_t* src_data = src.data();
+    uint8_t* dst_data = dst.data();
+    
+    int i = 0;
+    // Process 12 bytes (4 RGB pixels) at a time with SIMD
+    for (; i <= total_pixels * 3 - 12; i += 12) {
+        // Load 12 bytes (4 RGB pixels)
+        v128_t rgb_pixels = wasm_v128_load(src_data + i);
+        
+        // Convert RGB to BGR by shuffling
+        v128_t shuffled = wasm_i8x16_shuffle(rgb_pixels,
+            wasm_i32x4_splat(0), // dummy second vector
+            2, 1, 0,    // B0 G0 R0
+            5, 4, 3,    // B1 G1 R1  
+            8, 7, 6,    // B2 G2 R2
+            11, 10, 9,  // B3 G3 R3
+            14, 13, 12, // Partial next pixel if available
+            15          // Padding
+        );
+        
+        // Store converted BGR data
+        wasm_v128_store(dst_data + i, shuffled);
+    }
+    
+    // Process remaining pixels with scalar code
+    for (; i < total_pixels * 3; i += 3) {
+        uint8_t r = src_data[i];
+        uint8_t g = src_data[i + 1];
+        uint8_t b = src_data[i + 2];
+        
+        dst_data[i] = b;     // B
+        dst_data[i + 1] = g; // G
+        dst_data[i + 2] = r; // R
+    }
+}
+
+// SIMD-optimized memory copy for image data
+void fastMemcpy_SIMD(uint8_t* dst, const uint8_t* src, size_t size) {
+    size_t i = 0;
+    
+    // Process 16 bytes at a time with SIMD
+    for (; i <= size - 16; i += 16) {
+        v128_t data = wasm_v128_load(src + i);
+        wasm_v128_store(dst + i, data);
+    }
+    
+    // Process remaining bytes
+    for (; i < size; ++i) {
+        dst[i] = src[i];
+    }
+}
+#endif
 
 // Enum for image formats
 enum class ImageFormat {
@@ -78,7 +209,11 @@ public:
     uint8_t *allocate(const uint8_t *data, size_t size)
     {
         uint8_t *ptr = new uint8_t[size];
+#if HAVE_WASM_SIMD
+        fastMemcpy_SIMD(ptr, data, size);
+#else
         std::memcpy(ptr, data, size);
+#endif
         m_ptr = ptr;
         return ptr;
     }
@@ -158,7 +293,11 @@ private:
 
         // RGB から BGR への変換
         SimpleImage bgr_image;
+#if HAVE_WASM_SIMD
+        convertRGBtoBGR_SIMD(rgb_image, bgr_image);
+#else
         simple_imgproc::cvtColor(rgb_image, bgr_image, simple_imgproc::RGB2BGR);
+#endif
 
         return bgr_image;
     }
@@ -176,7 +315,11 @@ private:
         // RGB から BGR への変換
         SimpleImage rgb_image(height, width, SIMPLE_8UC3, decoded);
         SimpleImage bgr_image;
+#if HAVE_WASM_SIMD
+        convertRGBtoBGR_SIMD(rgb_image, bgr_image);
+#else
         simple_imgproc::cvtColor(rgb_image, bgr_image, simple_imgproc::RGB2BGR);
+#endif
         
         WebPFree(decoded);
         return bgr_image;
@@ -283,11 +426,20 @@ private:
         // RGBA を BGR に変換
         if (channels == 4) {
             SimpleImage result;
+#if HAVE_WASM_SIMD
+            // RGBA to BGR は複雑なので、通常の関数を使用
             simple_imgproc::cvtColor(image, result, simple_imgproc::RGBA2BGR);
+#else
+            simple_imgproc::cvtColor(image, result, simple_imgproc::RGBA2BGR);
+#endif
             return result;
         } else if (channels == 3) {
             SimpleImage result;
+#if HAVE_WASM_SIMD
+            convertRGBtoBGR_SIMD(image, result);
+#else
             simple_imgproc::cvtColor(image, result, simple_imgproc::RGB2BGR);
+#endif
             return result;
         } else {
             // グレースケールをBGRに変換
@@ -451,7 +603,14 @@ private:
             {
                 SimpleImage rotated;
                 simple_imgproc::rotate(image, rotated, simple_imgproc::ROTATE_180);
+#if HAVE_WASM_SIMD
+                // Use SIMD-optimized copy if available
+                image.create(rotated.rows(), rotated.cols(), rotated.channels());
+                fastMemcpy_SIMD(image.data(), rotated.data(), 
+                               rotated.rows() * rotated.cols() * rotated.channels());
+#else
                 image = rotated;
+#endif
             }
             break;
         case 6:
@@ -459,7 +618,14 @@ private:
             {
                 SimpleImage rotated;
                 simple_imgproc::rotate(image, rotated, simple_imgproc::ROTATE_90_CLOCKWISE);
+#if HAVE_WASM_SIMD
+                // Use SIMD-optimized copy if available
+                image.create(rotated.rows(), rotated.cols(), rotated.channels());
+                fastMemcpy_SIMD(image.data(), rotated.data(), 
+                               rotated.rows() * rotated.cols() * rotated.channels());
+#else
                 image = rotated;
+#endif
             }
             break;
         case 8:
@@ -467,7 +633,14 @@ private:
             {
                 SimpleImage rotated;
                 simple_imgproc::rotate(image, rotated, simple_imgproc::ROTATE_90_COUNTERCLOCKWISE);
+#if HAVE_WASM_SIMD
+                // Use SIMD-optimized copy if available
+                image.create(rotated.rows(), rotated.cols(), rotated.channels());
+                fastMemcpy_SIMD(image.data(), rotated.data(), 
+                               rotated.rows() * rotated.cols() * rotated.channels());
+#else
                 image = rotated;
+#endif
             }
             break;
         }
@@ -587,7 +760,11 @@ std::vector<uint8_t> encodeJPEG(const SimpleImage& image, int quality) {
     
     // BGR to RGB 変換とエンコード
     SimpleImage rgb_image;
+#if HAVE_WASM_SIMD
+    convertBGRtoRGB_SIMD(image, rgb_image);
+#else
     simple_imgproc::cvtColor(image, rgb_image, simple_imgproc::BGR2RGB);
+#endif
     
     while (cinfo.next_scanline < cinfo.image_height) {
         JSAMPROW row_pointer = rgb_image.ptr<JSAMPLE>(cinfo.next_scanline);
@@ -614,7 +791,11 @@ std::vector<uint8_t> encodeWEBP(const SimpleImage& image, float quality, bool lo
     
     // BGR to RGB 変換
     SimpleImage rgb_image;
+#if HAVE_WASM_SIMD
+    convertBGRtoRGB_SIMD(image, rgb_image);
+#else
     simple_imgproc::cvtColor(image, rgb_image, simple_imgproc::BGR2RGB);
+#endif
     
     uint8_t* webpData = nullptr;
     size_t webpSize = 0;
