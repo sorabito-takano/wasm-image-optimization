@@ -102,20 +102,6 @@ export default defineConfig(() => ({
     wasmImageOptimizationPlugin(),
     //wasmImageOptimizationPlugin("build/client/assets") // optional: assetsPath
   ],
-  optimizeDeps: {
-    //...
-    exclude: [
-      //...
-      '@sorabito-takano/wasm-image-optimization'
-    ]
-  },
-  ssr: {
-    //...
-    noExternal: [
-      //...
-      '@sorabito-takano/wasm-image-optimization'
-    ]
-  }
 }));
 ```
 
@@ -231,7 +217,6 @@ Lanczos-3 maintains sharpness while minimizing ringing for photographic sources.
 
 - Expose pluggable resize kernels (Mitchell, Catmull-Rom, Lanczos-2).
 - Optional AVIF output (investigation phase).
-- SIMD tuned inner loops for Lanczos (current version already uses -msimd128 at compile but kernel still scalar in places).
 - Update published TypeScript types to include `"jpeg"` (if not already updated in release at read time).
 - Optional prefilter for extreme downscale scenarios.
 
