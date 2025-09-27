@@ -23,8 +23,9 @@ WebAssembly-based image optimization library with a **custom minimal resize core
 
 ## Example
 
-https://next-image-convert.vercel.app/  
-![](https://raw.githubusercontent.com/node-libraries/wasm-image-optimization/refs/heads/master/doc/image.webp)
+https://wasm-image-optimization.web.app
+
+sources are at demo/nuxt
 
 ## API
 
