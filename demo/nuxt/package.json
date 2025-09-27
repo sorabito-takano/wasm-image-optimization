@@ -1,0 +1,21 @@
+{
+  "name": "nuxt-app",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare && node scripts/copy-wasm-assets.js",
+    "copy-wasm": "node scripts/copy-wasm-assets.js"
+  },
+  "dependencies": {
+    "@sorabito-takano/wasm-image-optimization": "^1.2.2",
+    "nuxt": "^4.1.2",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0",
+    "vue": "^3.5.21",
+    "vue-router": "^4.5.1"
+  }
+}
