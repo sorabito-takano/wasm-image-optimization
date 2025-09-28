@@ -46,6 +46,14 @@
             <span>Reduction:</span>
             <span>{{ stats.totalCompressionRatio }}</span>
           </div>
+          <div class="compression-item">
+            <span>Total Time:</span>
+            <span>{{ processingStats.isCompleted ? `${(processingStats.totalTime / 1000).toFixed(2)}s` : '-' }}</span>
+          </div>
+          <div class="compression-item">
+            <span>Avg per Image:</span>
+            <span>{{ processingStats.isCompleted ? `${(processingStats.averageTime / 1000).toFixed(2)}s` : '-' }}</span>
+          </div>
         </div>
       </section>
 
@@ -86,7 +94,7 @@
       <section v-else class="empty-state">
         <div class="empty-icon">🖼️</div>
   <h3>Upload images to get started</h3>
-  <p>Supports JPEG, PNG, WebP, and GIF formats</p>
+  <p>Supports JPEG, PNG, and WebP formats</p>
       </section>
 
       <!-- Client-side Only Notice -->
@@ -125,7 +133,7 @@ launchWorker(); // Prepare Worker in advance.
 
 // Composables
 const { images, addFiles, removeImage, clearImages, formatFileSize, getStats } = useFileHandler()
-const { processImages, initializeProcessor } = useImageProcessor()
+const { processImages } = useImageProcessor()
 
 // Reactive state
 const showModal = ref(false)
@@ -133,6 +141,11 @@ const selectedImage = ref<ProcessedImage | null>(null)
 const isProcessing = ref(false)
 const isClient = ref(false)
 const workerCount = ref(8)
+const processingStats = ref({
+  totalTime: 0,
+  averageTime: 0,
+  isCompleted: false
+})
 
 // Computed properties
 const stats = computed(() => getStats.value)
@@ -150,9 +163,35 @@ const handleFilesSelected = (files: File[]) => {
 const processAllImages = async () => {
   if (isProcessing.value || allProcessed.value) return
   
+  const startTime = performance.now()
+  const totalImages = images.value.length
+  
+  // Reset processing stats
+  processingStats.value = {
+    totalTime: 0,
+    averageTime: 0,
+    isCompleted: false
+  }
+  
   isProcessing.value = true
   try {
     await processImages(images.value as ProcessedImage[])
+    
+    const endTime = performance.now()
+    const totalTime = endTime - startTime
+    const averageTime = totalTime / totalImages
+    
+    // Update processing stats
+    processingStats.value = {
+      totalTime,
+      averageTime,
+      isCompleted: true
+    }
+    
+    console.log(`✅ Processing completed!`)
+    console.log(`📊 Total time: ${(totalTime / 1000).toFixed(2)} seconds`)
+    console.log(`📊 Average time per image: ${(averageTime / 1000).toFixed(2)} seconds`)
+    console.log(`🖼️ Images processed: ${totalImages}`)
   } catch (error) {
     console.error('Processing failed:', error)
   } finally {
@@ -163,6 +202,12 @@ const processAllImages = async () => {
 const clearAllImages = () => {
   clearImages()
   closeModal()
+  // Reset processing stats
+  processingStats.value = {
+    totalTime: 0,
+    averageTime: 0,
+    isCompleted: false
+  }
 }
 
 const openModal = (image: ProcessedImage) => {

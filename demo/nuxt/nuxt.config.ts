@@ -24,23 +24,8 @@ export default defineNuxtConfig({
     '~': '.'
   },
   
-  // WebWorker and WASM support
-  nitro: {
-    experimental: {
-      wasm: true
-    },
-  // Static file delivery configuration
-    publicAssets: [
-      {
-        dir: 'public/wasm-image-reducer',
-        baseURL: '/wasm-image-reducer',
-        maxAge: 60 * 60 * 24 * 7 // 1 week cache
-      }
-    ]
-  },
-
   // Enable SSR; WebWorkers only run on client
-  ssr: true, // Enable SSR by default, but handle WebWorkers client-side
+  ssr: false, // Enable SSR by default, but handle WebWorkers client-side
 
   // Vite configuration for better WASM support
   vite: {
@@ -51,23 +36,5 @@ export default defineNuxtConfig({
         '~': '.'
       }
     },
-  // Static file serving rules for dev server
-    server: {
-      fs: {
-        allow: ['..', './public/wasm-image-reducer']
-      }
-    }
   },
-
-  // Experimental features to improve WASM integration
-  experimental: {
-    payloadExtraction: false, // Disable payload extraction for better client-side hydration
-  },
-
-  // Runtime public configuration
-  runtimeConfig: {
-    public: {
-      wasmImageReducerPath: '/wasm-image-reducer'
-    }
-  }
 })
