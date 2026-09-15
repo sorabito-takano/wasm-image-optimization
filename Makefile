@@ -33,12 +33,16 @@ PILLOW_RESIZE_SOURCE = src/pillow_resize.cpp
 SIMPLE_IMGPROC_SOURCE = src/simple_imgproc.cpp
 SIMPLE_IMAGE_HEADER = src/simple_image.h
 
-CFLAGS = -Oz --closure 1 -msimd128 -sSTACK_SIZE=5MB \
+EXTRA_CFLAGS ?=
+EXTRA_LDFLAGS ?=
+MALLOC ?= emmalloc
+
+CFLAGS = -Oz -msimd128 $(EXTRA_CFLAGS) \
         -Ilibwebp -Ilibwebp/src $(LIBEXIF_INCLUDE) \
         -sUSE_LIBJPEG=1 -sUSE_LIBPNG=1
 
-CFLAGS_ASM = --bind \
-             -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web -s DYNAMIC_EXECUTION=0 -s MODULARIZE=1
+CFLAGS_ASM = --bind --closure 1 -sSTACK_SIZE=5MB -sMALLOC=$(MALLOC) \
+	     -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web -s DYNAMIC_EXECUTION=0 -s MODULARIZE=1 $(EXTRA_LDFLAGS)
 
 WEBP_SOURCES := $(wildcard libwebp/src/dsp/*.c) \
                 $(wildcard libwebp/src/enc/*.c) \
@@ -47,26 +51,28 @@ WEBP_SOURCES := $(wildcard libwebp/src/dsp/*.c) \
                 $(wildcard libwebp/sharpyuv/*.c)
 
 # Use WebAssembly OpenCV libraries
-WEBP_OBJECTS := $(WEBP_SOURCES:.c=.o)
-EXIF_OBJECTS := $(EXIF_SOURCES:.c=.o)
+WEBP_OBJECTS := $(addprefix $(WORKDIR)/,$(WEBP_SOURCES:.c=.o))
+EXIF_OBJECTS := $(addprefix $(WORKDIR)/,$(EXIF_SOURCES:.c=.o))
 
 .PHONY: all esm workers clean docker-prep
 
 all: esm workers
 
-$(WEBP_OBJECTS): %.o: %.c
+$(WEBP_OBJECTS): $(WORKDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
 	@emcc $(CFLAGS) -c $< -o $@
 
-$(EXIF_OBJECTS): %.o: %.c
-	@emcc $(CFLAGS) $(LIBEXIF_INCLUDE) -c $< -o $@
+$(EXIF_OBJECTS): $(WORKDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	@emcc $(CFLAGS) $(LIBEXIF_INCLUDE) -DGETTEXT_PACKAGE=\"libexif-12\" -DLOCALEDIR=\"\" -c $< -o $@
 
 $(WORKDIR):
 	@mkdir -p $(WORKDIR)
 
-$(WORKDIR)/webp.a: $(WORKDIR) $(WEBP_OBJECTS)
+$(WORKDIR)/webp.a: $(WEBP_OBJECTS) | $(WORKDIR)
 	@emar rcs $@ $(WEBP_OBJECTS)
 
-$(WORKDIR)/libexif.a: $(WORKDIR) $(EXIF_OBJECTS)
+$(WORKDIR)/libexif.a: $(EXIF_OBJECTS) | $(WORKDIR)
 	@emar rcs $@ $(EXIF_OBJECTS)
 
 $(ESMDIR) $(WORKERSDIR):

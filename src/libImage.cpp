@@ -112,7 +112,7 @@ void convertRGBtoBGR_SIMD(const SimpleImage& src, SimpleImage& dst) {
     
     int i = 0;
     // Process 12 bytes (4 RGB pixels) at a time with SIMD
-    for (; i <= total_pixels * 3 - 12; i += 12) {
+    for (; i <= total_pixels * 3 - 16; i += 12) {
         // Load 12 bytes (4 RGB pixels)
         v128_t rgb_pixels = wasm_v128_load(src_data + i);
         
@@ -148,7 +148,7 @@ void fastMemcpy_SIMD(uint8_t* dst, const uint8_t* src, size_t size) {
     size_t i = 0;
     
     // Process 16 bytes at a time with SIMD
-    for (; i <= size - 16; i += 16) {
+    for (; size - i >= 16; i += 16) {
         v128_t data = wasm_v128_load(src + i);
         wasm_v128_store(dst + i, data);
     }

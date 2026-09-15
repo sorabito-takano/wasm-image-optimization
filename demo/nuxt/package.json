@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@sorabito-takano/wasm-image-optimization": "^1.2.2",
-    "nuxt": "^4.1.2",
+    "nuxt": "^4.5.2",
     "vite-plugin-top-level-await": "^1.6.0",
-    "vite-plugin-wasm": "^3.5.0",
-    "vue": "^3.5.21",
-    "vue-router": "^4.5.1"
+    "vite-plugin-wasm": "^3.6.0",
+    "vue": "^3.5.42",
+    "vue-router": "^5.3.1"
   }
 }

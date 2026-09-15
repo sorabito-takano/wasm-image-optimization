@@ -87,6 +87,75 @@ export default defineConfig(() => ({
 
 ## Build
 
+### WASM Optimization and Reproducibility
+
+The Docker builds pin Emscripten **5.0.7**, libwebp **1.6.0**, and libexif
+**0.6.26**. JPEG/PNG ports are supplied by that Emscripten version. OpenCV is
+not built or linked. The default is `-Oz`, SIMD, and `emmalloc`; LTO remains
+opt-in because it increased uncompressed WASM size in the comparison below.
+Use `MALLOC=dlmalloc` to select the previous allocator.
+
+Measurements on macOS arm64, Homebrew Emscripten `5.0.7-git`, Node **24.15.0**:
+
+| Configuration | WASM bytes | gzip bytes | Brotli bytes | Sum of case medians (ms) |
+| --- | ---: | ---: | ---: | ---: |
+| Baseline: `-Oz`, dlmalloc | 706,655 | 295,565 | 246,114 | 1,832.4 |
+| LTO, dlmalloc | 713,009 | 294,101 | 244,509 | 1,868.7 |
+| LTO, emmalloc | 706,110 | 291,840 | 242,383 | 1,867.7 |
+| **Selected: `-Oz`, emmalloc** | **699,854** | **293,147** | **243,808** | **1,836.8** |
+
+The selected configuration saves **6,801 bytes (0.96%)** uncompressed and
+**2,306 bytes (0.94%)** with Brotli. Timings are indicative, not evidence of a
+speedup: they include the JS call, output copy, validation, and hashing.
+All configurations use the same updated dependencies and SIMD boundary fixes;
+this is not a comparison against the old published/demo binary.
+
+The benchmark used five local images (including two untracked JPEGs with/without
+EXIF), plus generated 1x1, 4x1, and 5x1 RGB PNGs. All 32 conversion cases matched
+byte-for-byte across configurations, with one warm-up and three measured rounds.
+The test also checks 16 short unsupported inputs. Linear memory capacity stayed
+at 105,316,352 bytes after warm-up in all four builds; this is not a heap leak
+analysis. ESM/CJS shared-WASM parity was separately checked for 15 cases.
+
+Docker verification also passed on Colima **arm64**, Docker **29.2.1**, and
+standalone Docker Compose **5.1.4**. Both Dockerfiles built successfully and
+produced ESM/CJS artifacts using Emscripten **5.0.7**. The default Dockerfile
+selected its ARM64 base image on this host; x86_64 execution remains untested.
+Docker baseline/selected builds, the default-Dockerfile build, and the local
+selected build passed the same 32-case output comparison and 16 short-input
+checks. Docker-generated ESM/CJS shared-WASM parity passed all 15 cases.
+
+| Docker configuration | WASM bytes | gzip bytes | Brotli bytes |
+| --- | ---: | ---: | ---: |
+| Baseline: dlmalloc | 706,655 | 296,187 | 245,542 |
+| Selected: emmalloc (both Dockerfiles) | 699,854 | 293,768 | 243,886 |
+
+Docker and local builds had identical image outputs, but their compressed WASM
+sizes differed slightly. Browser/Worker integration remains untested.
+
+To repeat the comparison, run these commands in a build environment with the
+pinned, configured libwebp/libexif source directories (such as the Docker dev
+shell). Use fresh output/work directories when changing flags or dependencies:
+
+```bash
+make -j4 esm WORKDIR=work/bench-baseline DISTDIR=dist/bench/baseline MALLOC=dlmalloc
+make -j4 esm WORKDIR=work/bench-lto DISTDIR=dist/bench/lto MALLOC=dlmalloc EXTRA_CFLAGS=-flto
+make -j4 esm WORKDIR=work/bench-lto-emmalloc DISTDIR=dist/bench/lto-emmalloc MALLOC=emmalloc EXTRA_CFLAGS=-flto
+make -j4 esm WORKDIR=work/bench-emmalloc DISTDIR=dist/bench/emmalloc MALLOC=emmalloc
+```
+
+Then, on the host with Node **24+**, run:
+
+```bash
+node test/wasm-benchmark.mjs dist/bench/baseline/esm dist/bench/lto/esm dist/bench/lto-emmalloc/esm dist/bench/emmalloc/esm
+```
+
+The first directory is the reference. The script exits nonzero on an output
+mismatch, conversion failure, or WASM trap, and prints a JSON report on success.
+It reads JPEG/PNG/WebP files in `images/` without modifying them. No additional
+npm dependencies are needed. `make clean` now removes dependency objects under
+`WORKDIR`; old source-adjacent `.o` files are no longer used.
+
 ### Architecture-aware Docker Build
 
 Automatic host architecture detection (x86_64 / arm64) is handled by the helper script:
@@ -101,6 +170,15 @@ pnpm build:wasm:auto
 # Manual architecture selection (override detection)
 pnpm docker:arm64    # Force ARM64 build
 pnpm docker:x86      # Force x86_64 build
+```
+
+The helpers require the `docker compose` plugin. On the verified Colima host,
+only standalone `docker-compose` was available and Buildx was absent, so the
+following fallback was used without changing host Docker configuration:
+
+```bash
+DOCKER_BUILDKIT=0 DOCKERFILE=docker/Dockerfile.arm64 docker-compose -f docker/docker-compose.auto.yml build dev
+DOCKERFILE=docker/Dockerfile.arm64 docker-compose -f docker/docker-compose.auto.yml run --rm --no-deps dev make -j4 all DISTDIR=dist/docker-check
 ```
 
 ### Incremental Development (Docker)
